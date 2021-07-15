@@ -171,6 +171,15 @@ function Import-DbaCsv {
     .PARAMETER NoTransaction
         Do not use a transaction when performing the import.
 
+    .PARAMETER First
+        First
+
+    .PARAMETER Last
+        Last
+
+    .PARAMETER Skip
+        Skip
+
     .PARAMETER WhatIf
         Shows what would happen if the command were to run. No actions are actually performed.
 
@@ -295,6 +304,9 @@ function Import-DbaCsv {
         [switch]$SupportsMultiline,
         [switch]$UseColumnDefault,
         [switch]$NoTransaction,
+        [int]$First,
+        [int]$Last,
+        [int]$Skip,
         [switch]$EnableException
     )
     begin {
