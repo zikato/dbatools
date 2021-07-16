@@ -269,7 +269,11 @@ function Invoke-DbaDiagnosticQuery {
             }
 
             if ($ExcludeQuery) {
-                $QueryName = Compare-Object -ReferenceObject $QueryName -DifferenceObject $ExcludeQuery | Where-Object SideIndicator -eq "<=" | Select-Object -ExpandProperty InputObject
+                if ($ExcludeQuery -like "*") {
+                    $QueryName = $QueryName | Where-Object -notlike $ExcludeQuery
+                } else {
+                    $QueryName = Compare-Object -ReferenceObject $QueryName -DifferenceObject $ExcludeQuery | Where-Object SideIndicator -eq "<=" | Select-Object -ExpandProperty InputObject
+                }
             }
 
             #since some database level queries can take longer (such as fragmentation) calculate progress with database specific queries * count of databases to run against into context
