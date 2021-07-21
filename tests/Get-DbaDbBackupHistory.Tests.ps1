@@ -53,10 +53,7 @@ Describe "$CommandName Integration Tests" -Tag "IntegrationTests" {
         It "Last Backup Should be a log backup" {
             $results[-1].Type | Should Be "Log"
         }
-        It "Last Backup Should be a log backup" {
-            $results[-2].Type | Should Be "Log"
-        }
-        It "Last Backup Should be a log backup" {
+        It "second  Backup Should be a diff backup" {
             $results[-3].Type | Should BeLike "Diff*"
         }
     }
