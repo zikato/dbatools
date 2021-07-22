@@ -40,9 +40,11 @@ Describe "$CommandName Integration Tests" -Tag "IntegrationTests" {
     }
 
     Context "Get last history for single database" {
+        # Note, these results are only valid on a 2008r2 instance. Newer ones return 3 backups (Full, diff, Log). Both results restore fine, just confuses the bejeezus out of pester and me.
         $results = Get-DbaDbBackupHistory -SqlInstance $script:instance1 -Database $dbname -Last
-        It "Should be 4 backups returned" {
-            $results.count | Should Be 4
+        $rout = $results | Restore-DbaDatabase -SqlInstance $script:instance1 -DatabaseName historytest -ReplaceDbNameInFile
+        It "Should be 3 backups returned" {
+            $results.count | Should Be 3
         }
         It "First backup should be a Full Backup" {
             $results[0].Type | Should be "Full"
@@ -54,7 +56,11 @@ Describe "$CommandName Integration Tests" -Tag "IntegrationTests" {
             $results[-1].Type | Should Be "Log"
         }
         It "second  Backup Should be a diff backup" {
-            $results[-3].Type | Should BeLike "Diff*"
+            $results[-2].Type | Should BeLike "Diff*"
+        }
+
+        It "Should be restorable" {
+            ($rout.RestoreComplete -eq $True | Measure-Object).count | Should -Be $rout.count
         }
     }
 
