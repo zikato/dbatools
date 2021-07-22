@@ -269,7 +269,7 @@ function Invoke-DbaDiagnosticQuery {
             }
 
             if ($ExcludeQuery) {
-                if ($ExcludeQuery -like "*") {
+                if ($ExcludeQuery -match ".*") {
                     $QueryName = $QueryName | Where-Object -notlike $ExcludeQuery
                 } else {
                     $QueryName = Compare-Object -ReferenceObject $QueryName -DifferenceObject $ExcludeQuery | Where-Object SideIndicator -eq "<=" | Select-Object -ExpandProperty InputObject
