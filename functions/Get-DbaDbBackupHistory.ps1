@@ -605,7 +605,7 @@ function Get-DbaDbBackupHistory {
                 }
 
                 if ($null -ne $Since) {
-                    $whereArray += "backupset.backup_finish_date >= CONVERT(datetime,'$($Since.ToString("yyyy-MM-ddTHH:mm:ss", [System.Globalization.CultureInfo]::InvariantCulture))',126)"
+                    $whereArray += "backupset.backup_start_date >= CONVERT(datetime,'$($Since.ToString("yyyy-MM-ddTHH:mm:ss", [System.Globalization.CultureInfo]::InvariantCulture))',126)"
                 }
 
                 if ($deviceTypeFilter) {
