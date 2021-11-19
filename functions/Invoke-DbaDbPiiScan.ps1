@@ -345,7 +345,6 @@ function Invoke-DbaDbPiiScan {
                                 } else {
                                     $query = "SELECT TOP($SampleCount) [$($columnobject.Name)] AS [$($columnobject.Name)] FROM [$($tableobject.Schema)].[$($tableobject.Name)]"
                                 }
-                                write-warning "$query"
 
                                 # Get the data
                                 try {

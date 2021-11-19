@@ -1229,7 +1229,6 @@ function Invoke-DbaDbDataMasking {
 
 
                                 $null = $stringBuilder.AppendLine("UPDATE [$($tableobject.Schema)].[$($tableobject.Name)] SET [$($columnObject.Name)] = $($compositeItemsUpdated -join ' + ')")
-                                Write-Warning "$stringBuilder"
                             }
 
                             try {
