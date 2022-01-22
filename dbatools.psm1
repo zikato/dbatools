@@ -467,6 +467,8 @@ $script:xplat = @(
     'Remove-DbaDbEncryptionKey',
     'Start-DbaDbEncryption',
     'Stop-DbaDbEncryption',
+    'Suspend-DbaDbEncryption',
+    'Resume-DbaDbEncryption',
     'Remove-DbaDatabase',
     'Get-DbaQueryExecutionTime',
     'Get-DbaTempdbUsage',

@@ -234,6 +234,8 @@
         'Remove-DbaDbEncryptionKey',
         'Start-DbaDbEncryption',
         'Stop-DbaDbEncryption',
+        'Suspend-DbaDbEncryption',
+        'Resume-DbaDbEncryption',
         'Get-DbaDbExtentDiff',
         'Get-DbaDbFeatureUsage',
         'Get-DbaDbFile',

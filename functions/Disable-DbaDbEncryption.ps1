@@ -82,7 +82,7 @@ function Disable-DbaDbEncryption {
     process {
         if ($SqlInstance) {
             if (-not $Database) {
-                Stop-Function -Message "You must specify Database or ExcludeDatabase when using SqlInstance"
+                Stop-Function -Message "You must specify Database when using SqlInstance"
                 return
             }
             # all does not need to be addressed in the code because it gets all the dbs if $databases is empty

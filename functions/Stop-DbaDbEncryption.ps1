@@ -43,12 +43,16 @@ function Stop-DbaDbEncryption {
     .EXAMPLE
         PS C:\> Stop-DbaDbEncryption -SqlInstance sql01
 
-        Removes this does that
+        Stops decryption and removes encryption keys for all databases on a SQL Server instance.
+
+        Prompts for confirmation along the way.
 
     .EXAMPLE
         PS C:\> Stop-DbaDbEncryption -SqlInstance sql01 -Confirm:$false
 
-        Removes this does that
+        Stops decryption and removes encryption keys for all databases on a SQL Server instance.
+
+        Does not prompt for confirmation along the way.
     #>
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = "High")]
     param (
@@ -66,6 +70,9 @@ function Stop-DbaDbEncryption {
 
         $stepCounter = 0
         foreach ($db in $InputObject) {
+            if ($stepCounter -eq 100) {
+                $stepCounter = 0
+            }
             $server = $db.Parent
             Write-ProgressHelper -StepNumber ($stepCounter++) -Message "Disabling encryption for $($db.Name) on $($server.Name)" -TotalSteps $InputObject.Count
             try {
