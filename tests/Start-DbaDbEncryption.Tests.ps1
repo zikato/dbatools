@@ -42,6 +42,8 @@ Describe "$CommandName Integration Tests" -Tags "IntegrationTests" {
             $results.Count | Should -Be 5
             $results | Select-Object -First 1 -ExpandProperty EncryptionEnabled | Should -Be $true
             $results | Select-Object -First 1 -ExpandProperty DatabaseName | Should -Match "random"
+            $fileinstance = "$script:instance2".ToString().Replace('\', '$')
+            Get-DbaFile -SqlInstance $script:instance2 -Path C:\temp | Should -match "$fileinstance"
         }
     }
 }

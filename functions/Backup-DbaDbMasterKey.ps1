@@ -81,6 +81,7 @@ function Backup-DbaDbMasterKey {
         [string[]]$ExcludeDatabase,
         [Alias("Password")]
         [Security.SecureString]$SecurePassword,
+        [Alias("BackupPath", "FilePath")]
         [string]$Path,
         [parameter(ValueFromPipeline)]
         [Microsoft.SqlServer.Management.Smo.Database[]]$InputObject,

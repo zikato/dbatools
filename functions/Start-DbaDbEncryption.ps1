@@ -212,8 +212,8 @@ function Start-DbaDbEncryption {
 
                 $null = $db.Refresh()
                 $null = $server.Refresh()
-
-                $dbmasterkeytest = Get-DbaFile -SqlInstance $server -Path $BackupPath | Where-Object FileName -match "$servername-master"
+                $fileinstance = $servername.ToString().Replace('\', '$')
+                $dbmasterkeytest = Get-DbaFile -SqlInstance $server -Path $BackupPath | Where-Object FileName -match "$fileinstance-master"
                 if (-not $dbmasterkeytest) {
                     # has to be repeated in the event databases are piped in
                     $params = @{
