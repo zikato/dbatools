@@ -1,10 +1,10 @@
 function Start-DbaDbEncryption {
     <#
     .SYNOPSIS
-        Combo command that encrypts all instances on a database and backs up all keys and certs
+        Combo command that encrypts all databases on an instance and backs up all keys and certs
 
     .DESCRIPTION
-        Combo command that encrypts all instances on a database and backs up all keys and certs
+        Combo command that encrypts all databases on an instance and backs up all keys and certs
 
         * Ensures a database master key exists in the master database and backs it up
         * Ensures a database certificate or asymmetric key exists in the master database and backs it up
