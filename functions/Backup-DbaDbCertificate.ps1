@@ -142,22 +142,22 @@ function Backup-DbaDbCertificate {
         }
         $time = Get-Date -Format yyyMMddHHmmss
 
-        function export-cert ($cert) {
+        function export-cert ($cert, $CertPath) {
             $certName = $cert.Name
             $db = $cert.Parent
             $dbname = $db.Name
             $server = $db.Parent
             $instance = $server.Name
 
-            if (-not $Path) {
-                $Path = $server.BackupDirectory
+            if (-not $CertPath) {
+                $CertPath = $server.BackupDirectory
             }
 
-            if (-not $Path) {
+            if (-not $CertPath) {
                 Stop-Function -Message "Path discovery failed. Please explicitly specify -Path" -Target $server -Continue
             }
 
-            $actualPath = "$Path".TrimEnd('\').TrimEnd('/')
+            $actualPath = "$CertPath".TrimEnd('\').TrimEnd('/')
 
             if (-not (Test-DbaPath -SqlInstance $server -Path $actualPath)) {
                 Stop-Function -Message "$SqlInstance cannot access $actualPath" -Target $actualPath
@@ -269,7 +269,7 @@ function Backup-DbaDbCertificate {
             if ($cert.Name.StartsWith("##")) {
                 Write-Message -Level Verbose -Message "Skipping system cert $cert"
             } else {
-                export-cert $cert
+                export-cert $cert -CertPath $Path
             }
         }
     }
