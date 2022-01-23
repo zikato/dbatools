@@ -142,7 +142,7 @@ function Backup-DbaDbCertificate {
         }
         $time = Get-Date -Format yyyMMddHHmmss
 
-        function export-cert ($cert, $CertPath) {
+        function export-cert ($Cert, $CertPath) {
             $certName = $cert.Name
             $db = $cert.Parent
             $dbname = $db.Name
@@ -269,7 +269,7 @@ function Backup-DbaDbCertificate {
             if ($cert.Name.StartsWith("##")) {
                 Write-Message -Level Verbose -Message "Skipping system cert $cert"
             } else {
-                export-cert $cert -CertPath $Path
+                export-cert -Cert $cert -CertPath $Path
             }
         }
     }
