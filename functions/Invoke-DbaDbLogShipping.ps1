@@ -517,6 +517,8 @@ function Invoke-DbaDbLogShipping {
     begin {
         if ($Force) { $ConfirmPreference = 'none' }
 
+        $PSDefaultParameterValues["*-Dba*:EnableException"] = $true
+
         Write-Message -Message "Started log shipping for $SourceSqlInstance to $DestinationSqlInstance" -Level Verbose
 
         # Try connecting to the instance
@@ -527,6 +529,23 @@ function Invoke-DbaDbLogShipping {
             return
         }
 
+        if ((Test-HostOSLinux -SqlInstance $sourceServer)) {
+            if (-not $LocalPath) {
+                $LocalPath = $SharedPath
+            }
+            if (-not $CopyDestinationFolder) {
+                $CopyDestinationFolder = $SharedPath
+            }
+            if (-not $FullBackupPath) {
+                $FullBackupPath = $SharedPath
+            }
+            if (-not $DatabaseSharedPath) {
+                $DatabaseSharedPath = $SharedPath
+            }
+            if (-not $DatabaseCopyDestinationFolder) {
+                $DatabaseCopyDestinationFolder = $SharedPath
+            }
+        }
 
         # Check the instance if it is a named instance
         $SourceServerName, $SourceInstanceName = $SourceSqlInstance.FullName.Split("\")
@@ -549,12 +568,11 @@ function Invoke-DbaDbLogShipping {
 
         # Check the backup network path
         Write-Message -Message "Testing backup network path $SharedPath" -Level Verbose
-        if ((Test-DbaPath -Path $SharedPath -SqlInstance $SourceSqlInstance -SqlCredential $SourceCredential) -ne $true) {
+        if ((Test-DbaPath -Path $SharedPath -SqlInstance $SourceSqlInstance -SqlCredential $SourceSqlCredential) -ne $true) {
             Stop-Function -Message "Backup network path $SharedPath is not valid or can't be reached." -Target $SourceSqlInstance
             return
         } elseif ($SharedPath -notmatch $RegexUnc) {
-            Stop-Function -Message "Backup network path $SharedPath has to be in the form of \\server\share." -Target $SourceSqlInstance
-            return
+            Write-Message -Level Verbose -Message "Backup network path $SharedPath not in the of \\server\share. This may be cause issues; make sure the path is accessible by all servers."
         }
 
         # Check the backup compression
@@ -563,7 +581,7 @@ function Invoke-DbaDbLogShipping {
                 Write-Message -Message "Setting backup compression to 1." -Level Verbose
                 [bool]$BackupCompression = 1
             } else {
-                $backupServerSetting = (Get-DbaSpConfigure -SqlInstance $SourceSqlInstance -ConfigName DefaultBackupCompression).ConfiguredValue
+                $backupServerSetting = (Get-DbaSpConfigure -SqlInstance $SourceSqlInstance -SqlCredential $SourceSqlCredential -ConfigName DefaultBackupCompression).ConfiguredValue
                 Write-Message -Message "Setting backup compression to default server setting $backupServerSetting." -Level Verbose
                 [bool]$BackupCompression = $backupServerSetting
             }
@@ -902,11 +920,11 @@ function Invoke-DbaDbLogShipping {
             # Check the copy destination
             if (-not $CopyDestinationFolder) {
                 # Make a default copy destination by retrieving the backup folder and adding a directory
-                $CopyDestinationFolder = "$($DestinationServer.Settings.BackupDirectory)\Logshipping"
+                $CopyDestinationFolder = Join-DbaPath -SqlInstance $DestinationServer -Path $("$DestinationServer.Settings.BackupDirectory").TrimEnd("/").TrimEnd("\") -ChildPath Logshipping
 
                 # Check to see if the path already exists
                 Write-Message -Message "Testing copy destination path $CopyDestinationFolder" -Level Verbose
-                if (Test-DbaPath -Path $CopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) {
+                if (Test-DbaPath -Path $CopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) {
                     Write-Message -Message "Copy destination $CopyDestinationFolder already exists" -Level Verbose
                 } else {
                     # Check if force is being used
@@ -976,16 +994,13 @@ function Invoke-DbaDbLogShipping {
             } # if not copy destination
 
             Write-Message -Message "Testing copy destination path $CopyDestinationFolder" -Level Verbose
-            if ((Test-DbaPath -Path $CopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+            if ((Test-DbaPath -Path $CopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                 $setupResult = "Failed"
                 $comment = "Copy destination folder $CopyDestinationFolder is not valid or can't be reached"
                 Stop-Function -Message "Copy destination folder $CopyDestinationFolder is not valid or can't be reached." -Target $destInstance
                 return
             } elseif ($CopyDestinationFolder.StartsWith("\\") -and $CopyDestinationFolder -notmatch $RegexUnc) {
-                $setupResult = "Failed"
-                $comment = "Copy destination folder $CopyDestinationFolder has to be in the form of \\server\share"
-                Stop-Function -Message "Copy destination folder $CopyDestinationFolder has to be in the form of \\server\share." -Target $destInstance
-                return
+                Write-Message -Level Verbose -Message "Copy destination folder $CopyDestinationFolder not in the of \\server\share. This may be cause issues; make sure the path is accessible by all servers."
             }
 
             if (-not ($SecondaryDatabasePrefix -or $SecondaryDatabaseSuffix) -and ($SourceServer.Name -eq $DestinationServer.Name) -and ($SourceServer.InstanceName -eq $DestinationServer.InstanceName)) {
@@ -1004,7 +1019,7 @@ function Invoke-DbaDbLogShipping {
                 # Check the stand-by directory
                 if ($StandbyDirectory) {
                     # Check if the path is reachable for the destination server
-                    if ((Test-DbaPath -Path $StandbyDirectory -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                    if ((Test-DbaPath -Path $StandbyDirectory -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                         $setupResult = "Failed"
                         $comment = "The directory $StandbyDirectory cannot be reached by the destination instance"
                         Stop-Function -Message "The directory $StandbyDirectory cannot be reached by the destination instance. Please check the permission and credentials." -Target $destInstance
@@ -1083,7 +1098,7 @@ function Invoke-DbaDbLogShipping {
                 # Checking if the database network path exists
                 if ($setupResult -ne 'Failed') {
                     Write-Message -Message "Testing database backup network path $DatabaseSharedPath" -Level Verbose
-                    if ((Test-DbaPath -Path $DatabaseSharedPath -SqlInstance $SourceSqlInstance -SqlCredential $SourceCredential) -ne $true) {
+                    if ((Test-DbaPath -Path $DatabaseSharedPath -SqlInstance $SourceSqlInstance -SqlCredential $SourceSqlCredential) -ne $true) {
                         # To to create the backup directory for the database
                         try {
                             Write-Message -Message "Database backup network path $DatabaseSharedPath not found. Trying to create it.." -Level Verbose
@@ -1195,7 +1210,7 @@ function Invoke-DbaDbLogShipping {
 
                             # Check if the restore data folder exists
                             Write-Message -Message "Testing database restore data path $DatabaseRestoreDataFolder" -Level Verbose
-                            if ((Test-DbaPath  -Path $DatabaseRestoreDataFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                            if ((Test-DbaPath  -Path $DatabaseRestoreDataFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                                 if ($PSCmdlet.ShouldProcess($DestinationServerName, "Creating database restore data folder $DatabaseRestoreDataFolder on $DestinationServerName")) {
                                     # Try creating the data folder
                                     try {
@@ -1213,7 +1228,7 @@ function Invoke-DbaDbLogShipping {
 
                             # Check if the restore log folder exists
                             Write-Message -Message "Testing database restore log path $DatabaseRestoreLogFolder" -Level Verbose
-                            if ((Test-DbaPath  -Path $DatabaseRestoreLogFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                            if ((Test-DbaPath  -Path $DatabaseRestoreLogFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                                 if ($PSCmdlet.ShouldProcess($DestinationServerName, "Creating database restore log folder $DatabaseRestoreLogFolder on $DestinationServerName")) {
                                     # Try creating the log folder
                                     try {
@@ -1237,7 +1252,7 @@ function Invoke-DbaDbLogShipping {
                     if ($setupResult -ne 'Failed') {
                         if ($FullBackupPath) {
                             Write-Message -Message "Testing full backup path $FullBackupPath" -Level Verbose
-                            if ((Test-DbaPath -Path $FullBackupPath -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                            if ((Test-DbaPath -Path $FullBackupPath -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                                 $setupResult = "Failed"
                                 $comment = "The path to the full backup could not be reached"
                                 Stop-Function -Message ("The path to the full backup could not be reached. Check the path and/or the crdential") -ErrorRecord $_ -Target $destInstance -Continue
@@ -1246,7 +1261,7 @@ function Invoke-DbaDbLogShipping {
                             $BackupPath = $FullBackupPath
                         } elseif ($UseBackupFolder.Length -ge 1) {
                             Write-Message -Message "Testing backup folder $UseBackupFolder" -Level Verbose
-                            if ((Test-DbaPath -Path $UseBackupFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                            if ((Test-DbaPath -Path $UseBackupFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                                 $setupResult = "Failed"
                                 $comment = "The path to the backup folder could not be reached"
                                 Stop-Function -Message ("The path to the backup folder could not be reached. Check the path and/or the crdential") -ErrorRecord $_ -Target $destInstance -Continue
@@ -1263,7 +1278,7 @@ function Invoke-DbaDbLogShipping {
                             if ($null -ne $LastBackup) {
                                 # Test the path to the backup
                                 Write-Message -Message "Testing last backup path $(($LastBackup[-1]).Path[-1])" -Level Verbose
-                                if ((Test-DbaPath -Path ($LastBackup[-1]).Path[-1] -SqlInstance $SourceSqlInstance -SqlCredential $SourceCredential) -ne $true) {
+                                if ((Test-DbaPath -Path ($LastBackup[-1]).Path[-1] -SqlInstance $SourceSqlInstance -SqlCredential $SourceSqlCredential) -ne $true) {
                                     $setupResult = "Failed"
                                     $comment = "The full backup could not be found"
                                     Stop-Function -Message "The full backup could not be found on $($LastBackup.Path). Check path and/or credentials" -ErrorRecord $_ -Target $destInstance -Continue
@@ -1312,7 +1327,7 @@ function Invoke-DbaDbLogShipping {
                 # Check if the copy destination folder exists
                 if ($setupResult -ne 'Failed') {
                     Write-Message -Message "Testing database copy destination path $DatabaseCopyDestinationFolder" -Level Verbose
-                    if ((Test-DbaPath -Path $DatabaseCopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationCredential) -ne $true) {
+                    if ((Test-DbaPath -Path $DatabaseCopyDestinationFolder -SqlInstance $destInstance -SqlCredential $DestinationSqlCredential) -ne $true) {
                         if ($PSCmdlet.ShouldProcess($DestinationServerName, "Creating copy destination folder on $DestinationServerName")) {
                             try {
                                 Invoke-Command2 -Credential $DestinationCredential -ScriptBlock {
@@ -1595,7 +1610,7 @@ function Invoke-DbaDbLogShipping {
                                 -MonitorServer $SecondaryMonitorServer `
                                 -MonitorServerSecurityMode $SecondaryMonitorServerSecurityMode `
                                 -MonitorCredential $SecondaryMonitorCredential `
-                                -PrimaryServer $SourceSqlInstance `
+                                -PrimaryServer $SourceServer `
                                 -PrimaryDatabase $($db.Name) `
                                 -RestoreJob $DatabaseRestoreJob `
                                 -Force:$Force
@@ -1642,7 +1657,7 @@ function Invoke-DbaDbLogShipping {
                             New-DbaLogShippingSecondaryDatabase -SqlInstance $destInstance `
                                 -SqlCredential $DestinationSqlCredential `
                                 -SecondaryDatabase $SecondaryDatabase `
-                                -PrimaryServer $SourceSqlInstance `
+                                -PrimaryServer $SourceServer `
                                 -PrimaryDatabase $($db.Name) `
                                 -RestoreDelay $RestoreDelay `
                                 -RestoreMode $DatabaseStatus `
