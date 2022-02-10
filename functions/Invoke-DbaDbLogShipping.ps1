@@ -861,7 +861,11 @@ function Invoke-DbaDbLogShipping {
 
         if (Test-FunctionInterrupt) { return }
 
+        $doneDestinstances = @()
+
         foreach ($destInstance in $DestinationSqlInstance) {
+
+            $doneDestinstances += $destInstance
 
             $setupResult = "Success"
             $comment = ""
@@ -1586,7 +1590,18 @@ function Invoke-DbaDbLogShipping {
 
                             # Due to the way log shipping is set, we have to iterate all the secondaries
                             # We have to make sure that we do not do this for the current destination
-                            foreach ($tmpInstance in ($DestinationSqlInstance)) {
+
+                            $params = @{
+                                SqlInstance            = $SourceSqlInstance
+                                SqlCredential          = $Sourcesqlcredential
+                                primarydatabase        = $($db.name)
+                                Secondarydatabase      = $secondarydatabase
+                                Secondaryserver        = $doneDestinstances
+                                Secondarysqlcredential = $destinationsqlcredential
+                            }
+                            New-DbaLogShippingPrimarySecondary @params
+
+                            <# foreach ($tmpInstance in ($DestinationSqlInstance)) {
                                 if ($tmpInstance -ne $destInstance) {
                                     $params = @{
                                         SqlInstance            = $SourceSqlInstance
@@ -1598,7 +1613,7 @@ function Invoke-DbaDbLogShipping {
                                     }
                                     New-DbaLogShippingPrimarySecondary @params
                                 }
-                            }
+                            } #>
 
 
                             #HFX END
