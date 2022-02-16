@@ -195,6 +195,13 @@ function Remove-DbaDbLogShipping {
                 }
             }
 
+            # Remove the secondary instance from log shipping
+            if ($PSCmdlet.ShouldProcess("Removing secondairy instance from log shipping")) {
+                $query = "EXEC dbo.sp_delete_log_shipping_secondary
+                    @secondary_server_name = N'$($logshippingInfo.SecondaryServer)',
+                    @secondary_database_name = N'$($logshippingInfo.SecondaryDatabase)'"
+            }
+
             # Remove the secondary database if needed
             if ($RemoveSecondaryDatabase) {
                 if ($PSCmdlet.ShouldProcess("Removing the secondary database from [$($logshippingInfo.SecondaryDatabase)]")) {
