@@ -200,6 +200,13 @@ function Remove-DbaDbLogShipping {
                 $query = "EXEC dbo.sp_delete_log_shipping_secondary
                     @secondary_server_name = N'$($logshippingInfo.SecondaryServer)',
                     @secondary_database_name = N'$($logshippingInfo.SecondaryDatabase)'"
+
+                try {
+                    Write-Message -Level verbose -Message "Removing the secondary instance from log shipping"
+                    Invoke-DbaQuery -SqlInstance $secondaryServer -SqlCredential $SecondarySqlCredential -Database master -Query $query
+                } catch {
+                    Stop-Function -Message "Something went wrong removing the secondary instance from log shipping" -Target $secondaryServer -ErrorRecord $_
+                }
             }
 
             # Remove the secondary database if needed
