@@ -131,23 +131,22 @@ function Set-DbaNetworkConfiguration {
 
     begin {
         $wmiScriptBlock = {
-            # This scriptblock will be processed by Invoke-ManagedComputerCommand.
-            # It is extended there above this line by the following lines:
-            #   $ipaddr = $args[$args.GetUpperBound(0)]
-            #   [void][System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')
-            #   $wmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $ipaddr
-            #   $null = $wmi.Initialize()
-            # So we can use $wmi here and assume that there is a successful connection.
-
             # We take on object as the first parameter which has to include the instance name and the target network configuration.
+            # We take the IP address of the target computer as the second parameter.
             $targetConf = $args[0]
+            $ipAddress = $args[1]
             $changes = @()
             $verbose = @()
-            $verbose += $setupVerbose
             $exception = $null
 
             try {
-                $verbose += "Starting code from Set-DbaNetworkConfiguration"
+                $verbose += "Starting WMI initialization at $ipAddress"
+
+                [void][System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')
+                $wmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $ipAddress
+                $result = $wmi.Initialize()
+
+                $verbose += "Finished WMI initialization with $result"
 
                 # If WMI object is empty, there are no client protocols - so we test for that to see if initialization was successful
                 $verbose += "Found $($wmi.ServerInstances.Count) instances and $($wmi.ClientProtocols.Count) client protocols inside of WMI object"
@@ -330,13 +329,13 @@ function Set-DbaNetworkConfiguration {
 
             if ($DisableProtocol) {
                 if ($netConf."${DisableProtocol}Enabled") {
-                    Write-Message -Level Verbose -Message "Will disable protocol $EnableProtocol on $instance."
+                    Write-Message -Level Verbose -Message "Will disable protocol $DisableProtocol on $instance."
                     $netConf."${DisableProtocol}Enabled" = $false
                     if ($DisableProtocol -eq 'TcpIp') {
                         $netConf.TcpIpProperties.Enabled = $false
                     }
                 } else {
-                    Write-Message -Level Verbose -Message "Protocol $EnableProtocol is already disabled on $instance."
+                    Write-Message -Level Verbose -Message "Protocol $DisableProtocol is already disabled on $instance."
                 }
             }
 
