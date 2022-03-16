@@ -185,6 +185,89 @@ function Test-DbaCmConnection {
             }
         }
 
+        function Test-ConnectionSqlWmi {
+            [CmdletBinding()]
+            param (
+                [string]
+                $ComputerName,
+
+                [System.Management.Automation.PSCredential]
+                $Credential
+            )
+
+            $wmiScriptBlock = {
+                # We take the IP address or hostname of the target computer as the first parameter.
+                # We take the credential as an optional second parameter.
+                $target = $args[0]
+                $cred = $args[1]
+                $verbose = @()
+                $exception = $null
+
+                try {
+                    $verbose += "Starting WMI initialization at $target"
+
+                    [void][System.Reflection.Assembly]::LoadWithPartialName('Microsoft.SqlServer.SqlWmiManagement')
+                    if ($cred) {
+                        $verbose += "Connecting with given credential for username $($cred.UserName)"
+                        $wmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $target, $cred.UserName, $cred.GetNetworkCredential().Password
+                    } else {
+                        $verbose += "Connecting without credential"
+                        $wmi = New-Object Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer $target
+                    }
+                    $result = $wmi.Initialize()
+
+                    $verbose += "Finished WMI initialization with $result"
+
+                    # If WMI object is empty, there are no client protocols - so we test for that to see if initialization was successful
+                    $verbose += "Found $($wmi.ServerInstances.Count) instances and $($wmi.ClientProtocols.Count) client protocols inside of WMI object"
+
+                    if ($wmi.ClientProtocols.Count) {
+                        $success = $true
+                    } else {
+                        $success = $false
+                    }
+                } catch {
+                    $exception = $_
+                    $success = $false
+                }
+
+                [PSCustomObject]@{
+                    Success   = $success
+                    Verbose   = $verbose
+                    Exception = $exception
+                }
+            }
+
+            try {
+                $result = Invoke-Command -ScriptBlock $wmiScriptBlock -ArgumentList $ComputerName, $Credential -ErrorAction Stop
+                foreach ($msg in $result.Verbose) {
+                    Write-Message -Level Verbose -Message $msg
+                }
+                Write-Message -Level Verbose -Message "Success = $($result.Success)"
+                if ($result.Exception) {
+                    # The new code pattern for WMI calls like in Set-DbaNetworkConfiguration is used where all exceptions are catched and return as part of an object.
+                    Write-Message -Level Verbose -Message "Execution against $ComputerName failed with: $($result.Exception)"
+                    New-Object PSObject -Property @{
+                        Success       = "Failure: $($result.Exception)"
+                        Timestamp     = Get-Date
+                        Authenticated = $true
+                    }
+                } else {
+                    New-Object PSObject -Property @{
+                        Success       = $result.Success
+                        Timestamp     = Get-Date
+                        Authenticated = $true
+                    }
+                }
+            } catch {
+                New-Object PSObject -Property @{
+                    Success       = "Error"
+                    Timestamp     = Get-Date
+                    Authenticated = $true
+                }
+            }
+        }
+
         function Test-ConnectionPowerShellRemoting {
             [CmdletBinding()]
             param (
@@ -292,6 +375,10 @@ function Test-DbaCmConnection {
                             $con.AddBadCredential($Credential)
                             break types
                         }
+
+                        Write-Message -Level Verbose -Message "[$Computer] Testing management access using SQL WMI."
+                        $res = Test-ConnectionSqlWmi -ComputerName $Computer -Credential $Credential
+                        Write-Message -Level VeryVerbose -Message "[$Computer] SQL WMI Results | Success: $($res.Success), Authentication: $($res.Authenticated)"
                     }
                     #endregion Wmi
 
