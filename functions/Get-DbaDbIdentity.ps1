@@ -1,7 +1,7 @@
 function Get-DbaDbIdentity {
     <#
     .SYNOPSIS
-        Checks the current identity value via DBCC CHECKIDENT with NORESEED optuin
+        Checks the current identity value via DBCC CHECKIDENT with NORESEED option
 
     .DESCRIPTION
         Use the command DBCC CHECKIDENT with NORESEED option to checks the current identity value of a table and return results
